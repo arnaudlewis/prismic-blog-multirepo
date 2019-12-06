@@ -20,19 +20,19 @@ app.use((req, res, next) => {
     endpoint: PrismicConfig.apiEndpoint,
     linkResolver: PrismicConfig.linkResolver,
   };
-  
+
   // Add UI helpers to access them in templates
   res.locals.UIhelpers = UIhelpers;
-  
+
   // Add PrismicDOM in locals to access them in templates
   res.locals.PrismicDOM = PrismicDOM;
-  
+
   // Add the prismic.io API to the req
-  Prismic.api(PrismicConfig.apiEndpoint, {
-    accessToken: PrismicConfig.accessToken,
-    req,
-  }).then((api) => {
-    req.prismic = { api };
+  Promise.all([
+    Prismic.api(PrismicConfig.apiEndpointRepo1, { req }),
+    Prismic.api(PrismicConfig.apiEndpointRepo2, { req })
+  ]).then(([apiRepo1, apiRepo2]) => {
+    req.prismic = { apiRepo1, apiRepo2 };
     next();
   }).catch((error) => {
     next(error.message);
@@ -48,15 +48,7 @@ app.use((req, res, next) => {
 */
 app.get('/preview', (req, res) => {
   const token = req.query.token;
-  if (token) {
-    req.prismic.api.previewSession(token, PrismicConfig.linkResolver, '/').then((url) => {
-      res.redirect(302, url);
-    }).catch((err) => {
-      res.status(500).send(`Error 500 in preview: ${err.message}`);
-    });
-  } else {
-    res.send(400, 'Missing token from querystring');
-  }
+  res.redirect(302, "/");
 });
 
 
@@ -66,22 +58,15 @@ app.get('/preview', (req, res) => {
 app.get(['/', '/blog'], (req, res) =>
 
   // Query the homepage
-  req.prismic.api.getSingle("blog_home").then((bloghome) => {
-    
+  req.prismic.apiRepo1.getSingle("blog_home").then((bloghome) => {
+
     // If a document is returned...
     if (bloghome) {
-
-      var queryOptions = {
-        page: req.params.p || '1',
-        orderings: '[my.post.date desc]'
-      };
-
       // Query the posts
-      req.prismic.api.query(
-        Prismic.Predicates.at("document.type", "post"),
-        queryOptions
+      req.prismic.apiRepo2.query(
+        Prismic.Predicates.at("document.type", "post")
       ).then(function(response) {
-        
+
         // Render the blog homepage
         res.render('bloghome', {
           bloghome,
@@ -106,12 +91,12 @@ app.get('/blog/:uid', (req, res) => {
   const uid = req.params.uid;
 
   // Query the post by its uid
-  req.prismic.api.getByUID('post', uid).then(post => {
+  req.prismic.apiRepo2.getByUID('post', uid).then(post => {
 
     if (post) {
       // If a document is returned, render the post
       res.render('post', { post });
-      
+
     // Else display the 404 page
     } else {
       res.status(404).render('404');

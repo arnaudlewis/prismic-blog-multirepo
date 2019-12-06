@@ -1,6 +1,7 @@
 module.exports = {
 
-  apiEndpoint: 'https://your-repo-name.prismic.io/api/v2',
+  apiEndpointRepo1: 'http://repo1.wroom.test/api/v2',
+  apiEndpointRepo2: 'http://repo2.wroom.test/api/v2',
 
   // -- Access token if the Master is not open
   // accessToken: 'xxxxxx',
